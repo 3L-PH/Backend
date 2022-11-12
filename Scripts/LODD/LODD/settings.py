@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     #user app
+    'page',
     'django_celery_results',
 ]
 
