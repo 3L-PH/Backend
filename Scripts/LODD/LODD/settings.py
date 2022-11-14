@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-9ui__q+^7qr5+ty!jj(v3!y#ol1f&y#ci9u)ypzo9q9^r%$z@*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -40,12 +40,11 @@ INSTALLED_APPS = [
 
     #user app
     'page',
-    'django_celery_results',
-]
 
-#user change
-BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+    #django rest framework
+    'rest_framework',
+    #'django_celery_results',
+]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
