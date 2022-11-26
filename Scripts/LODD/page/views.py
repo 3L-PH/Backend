@@ -46,10 +46,11 @@ def game_start():
     for f in os.listdir(dir):
         os.remove(os.path.join(dir, f))
     os.rmdir(dir)
-    
+
 @api_view(['POST'])
 @permission_classes([AllowAny,])
 def sleep_check(request):
+    game_start()
     if request.method == 'POST':
         try:
             img = request.data["img"]
@@ -67,6 +68,7 @@ def sleep_check(request):
         print(result)
         if result[-1] == 1:
             message = {"data":"game start", "status":"success"}
+            game_start()
                 # 여기서 게임 시작하면 될듯
         else:
             message = {"data" : result, "state" : "success"}
