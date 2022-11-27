@@ -60,16 +60,13 @@ def sleep_check(request):
         try:
             img = request.data["img"]
             INIT_FLAG = request.data["INIT_FLAG"]
-            nose_length = request.data["nose_length"]
-            face_length = request.data["face_length"]
-            open = request.data["open"]
-            close = request.data["close"]
+            close_first = request.data["close_first"]
             closed_flag = request.data["closed_flag"]
             game_flag = request.data["game_flag"]
         except:
             message = {"message" : "Not Enough data", "State" : "fail"}
             return JsonResponse(message, status = HTTP_400_BAD_REQUEST)
-        result = vision(img, INIT_FLAG, nose_length, face_length, open, close, closed_flag, game_flag)
+        result = vision(img, INIT_FLAG, close_first, closed_flag, game_flag)
         print(result)
         if result[-1] == 1:
             message = {"data":"game start", "status":"success"}
