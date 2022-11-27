@@ -35,15 +35,15 @@ def eye_aspect_ratio(eye) :
     return ear
 
 #캠 인식하고 5초 동안 눈 ear 값과 코 길이 측정
-def init_open_ear(landmarks, both_ear) :
+def init_open_ear(landmarks_list, both_ear_list) :
     ear_list = []
     nose_list = []
     face_list = []
     print("눈과 코 인식을 시작합니다")
-    for i in range(100) :
-        face = landmarks.part(8).y - landmarks.part(27).y
-        nose = landmarks.part(30).y - landmarks.part(27).y
-        ear_list.append(both_ear)
+    for i in range(len(landmarks_list)) :
+        face = landmarks_list[i].part(8).y - landmarks_list[i].part(27).y
+        nose = landmarks_list[i].part(30).y - landmarks_list[i].part(27).y
+        ear_list.append(both_ear_list[i])
         face_list.append(face)
         nose_list.append(nose)
     OPEN_EAR = 0
@@ -73,9 +73,8 @@ def light_removing(frame) :
     composed = cv2.addWeighted(gray, 0.75, invert_L, 0.25, 0)
     return L, composed
 
-def vision(img, INIT_FLAG, open, close_first, closed_flag, game_flag):
+def vision(img, INIT_FLAG, close_first, closed_flag, game_flag):
     INIT_FLAG = int(INIT_FLAG)
-    open = float(open)
     close_first = float(close_first)
     closed_flag = int(closed_flag)
     game_flag = int(game_flag)
@@ -163,4 +162,4 @@ def vision(img, INIT_FLAG, open, close_first, closed_flag, game_flag):
                 print("끝말잇기 게임이 실행됩니다")
                 return [game_flag]
         
-    return [INIT_FLAG, open, close_first, closed_flag, game_flag]
+    return [INIT_FLAG, close_first, closed_flag, game_flag]
