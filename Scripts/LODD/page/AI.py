@@ -21,8 +21,11 @@ predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 (lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
 (rStart, rEnd) = face_utils.FACIAL_LANDMARKS_IDXS["right_eye"]
 
+landmarks_list = []
+both_ear_list = []
+
 OPEN_EAR = 0 #For init_open_ear()
-EAR_THRESH = 0 #Threashold value
+EAR_THRESH = 100 #Threashold value
 
 def eye_aspect_ratio(eye) :
     A = dist.euclidean(eye[1], eye[5])
@@ -32,7 +35,7 @@ def eye_aspect_ratio(eye) :
     return ear
 
 #캠 인식하고 5초 동안 눈 ear 값과 코 길이 측정
-def init_open_ear(landmarks, both_ear, nose_length, face_length) :
+def init_open_ear(landmarks, both_ear) :
     ear_list = []
     nose_list = []
     face_list = []
@@ -61,11 +64,6 @@ def init_open_ear(landmarks, both_ear, nose_length, face_length) :
     EAR_THRESH = (((OPEN_EAR - CLOSE_EAR) * 0.6) + CLOSE_EAR) #EAR_THRESH means 50% of the being opened eyes state
     print("OPEN_EAR : ", OPEN_EAR, "\nCLOSE_EAR : ", CLOSE_EAR, "\nEAR_THRESH : ", EAR_THRESH, "\nNOSE_LENGTH : ", nose_length, "\nFACE_LENGTH : ", face_length)
 
-
-def init_message() :
-    print("init_message")
-    #alarm.sound_alarm("init_sound.mp3")
-
 def light_removing(frame) :
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
@@ -75,40 +73,10 @@ def light_removing(frame) :
     composed = cv2.addWeighted(gray, 0.75, invert_L, 0.25, 0)
     return L, composed
 
-def get_head_angle_ratio(head_points, facial_landmarks, _frame):
-    # 코의 가로선 표시
-    nose_region1 = np.array([(facial_landmarks.part(head_points[0]).x, facial_landmarks.part(head_points[0]).y),
-                             (facial_landmarks.part(head_points[1]).x, facial_landmarks.part(head_points[1]).y),
-                             (facial_landmarks.part(head_points[2]).x, facial_landmarks.part(head_points[2]).y),
-                             (facial_landmarks.part(head_points[3]).x, facial_landmarks.part(head_points[3]).y)],
-                            np.int32)
-    cv2.polylines(_frame, [nose_region1], True, (0, 255, 255), 1)
-
-#####################################################################################################################
-#1. Variables for checking EAR.
-#2. Variables for detecting if user is asleep.
-#3. When the alarm rings, measure the time eyes are being closed.
-#4. When the alarm is rang, count the number of times it is rang, and prevent the alarm from ringing continuously.
-#5. We should count the time eyes are being opened for data labeling.
-#6. Variables for trained data generation and calculation fps.
-#7. Detect face & eyes.
-#8. Run the cam.
-#9. Threads to run the functions in which determine the EAR_THRESH.
-
-def vision(img, INIT_FLAG, nose_length, face_length, open, close, closed_flag, game_flag):
-    #1.
-    #9.
-    """if init_flag < 10:
-        th_open = Thread(target = init_open_ear, args=(landmarks, both_ear, nose_length, face_length))
-        th_open.deamon = True
-        th_open.start()"""
-
-    #####################################################################################################################
+def vision(img, INIT_FLAG, open, close_first, closed_flag, game_flag):
     INIT_FLAG = int(INIT_FLAG)
-    nose_length = int(nose_length)
-    face_length = int(face_length)
     open = float(open)
-    close = float(close)
+    close_first = float(close_first)
     closed_flag = int(closed_flag)
     game_flag = int(game_flag)
 
@@ -120,12 +88,21 @@ def vision(img, INIT_FLAG, nose_length, face_length, open, close, closed_flag, g
     
     L, gray = light_removing(frame)
     rects = detector(gray,0)
-    
-    #prev_time, fps = check_fps(prev_time)
+    # 처음 웹 캠 연결된 이미지 전송받을 때
+    if INIT_FLAG == 0:
+        global landmarks_list
+        global both_ear_list
+        global nose_length
+        global face_length
 
-    #checking fps. If you want to check fps, just uncomment below two lines.
-    #prev_time, fps = check_fps(prev_time)
-    #cv2.putText(frame, "fps : {:.2f}".format(fps), (10,130), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200,30,20), 2)
+        landmarks_list = []
+        both_ear_list = []
+        nose_length = 0
+        face_length = 0
+
+    # EAR_THRESH값 설정을 위한 데이터 수집 완료
+    if INIT_FLAG == 100:
+        init_open_ear(landmarks_list, both_ear_list)
 
     for rect in rects:
         shape = predictor(gray, rect)
@@ -137,46 +114,53 @@ def vision(img, INIT_FLAG, nose_length, face_length, open, close, closed_flag, g
         rightEAR = eye_aspect_ratio(rightEye)
 
         both_ear = (leftEAR + rightEAR) * 500  #I multiplied by 1000 to enlarge the scope.
-
-        leftEyeHull = cv2.convexHull(leftEye)
-        rightEyeHull = cv2.convexHull(rightEye)
-        cv2.drawContours(frame, [leftEyeHull], -1, (0,255,0), 1)
-        cv2.drawContours(frame, [rightEyeHull], -1, (0,255,0), 1)
         
         faces = detector(gray)
 
-
         for face in faces:
             landmarks = predictor(gray, face)
-            get_head_angle_ratio([27, 28, 29, 30, 31, 32, 33, 34, 35], landmarks, frame)
+
+            # 처음 100개 이미지에 대해서 landmarks랑 both ear 수집
+            if INIT_FLAG < 100:
+                landmarks_list.append(landmarks)
+                both_ear_list.append(both_ear)
+                INIT_FLAG += 1
         
-        if INIT_FLAG <= 100:
-            print("start thread")
-            init_open_ear(landmarks, both_ear, nose_length, face_length)
-            INIT_FLAG += 1
-        else:
-            print("EAR_THRESH : {}".format(EAR_THRESH))
+        # EAR_THRESH 설정 완료 후 졸음 인식 시작
+        if INIT_FLAG == 100:
             #face = landmarks.part(8).y - landmarks.part(27).y
             #nose = landmarks.part(30).y - landmarks.part(27).y
             #print(nose, face, face - nose)
             #if nose - nose_length > 3 and nose_length > 0:
             #    print("고개를 숙였습니다 : ") 
-            print("both_ear : {}".format(both_ear))
             
-            if both_ear < EAR_THRESH and closed_flag == 0:
+            # 눈 감고있는 상태
+            if both_ear < EAR_THRESH:
                 print("now close")
 
-                close = time.time()
-                closed_flag = 1
-            if both_ear > EAR_THRESH and closed_flag == 1:
+                # 처음 눈을 감은 시간
+                if closed_flag == 0:
+                    close_first = time.time()
+                    closed_flag = 1
+                # 눈을 감고있는 상태에서 지금 시간
+                close_now = time.time()
+
+            # 눈 뜬 상태
+            if both_ear >= EAR_THRESH:
                 print("now open")
 
-                open = time.time()
+                # 눈 감고있는 시간 변수 초기화
+                close_first = 0
+                close_now = 0
                 closed_flag = 0
-            closed = open - close
+
+            # 눈을 감고있는 시간
+            closed = close_first - close_now
+
+            # 0.5초 이상 눈 감고있으면 졸음으로 인식 -> 게임 시작
             if closed >= 0.5 and game_flag == 0:
                 game_flag = 1
                 print("끝말잇기 게임이 실행됩니다")
                 return [game_flag]
         
-    return [INIT_FLAG, nose_length, face_length, open, close, closed_flag, game_flag]
+    return [INIT_FLAG, open, close_first, closed_flag, game_flag]
