@@ -15,7 +15,6 @@ def speak(text, dir):
 def recognition():
     r = sr.Recognizer()
     with sr.Microphone() as source:
-        print("Say Something")
         speech = r.listen(source)
 
     try:
@@ -23,8 +22,8 @@ def recognition():
         print("Your speech thinks like\n " + audio)
         return audio
     except sr.UnknownValueError:
-        print("Your speech can not understand")
-        return ''
+        print("Your speech can not understand unknown")
+        return 'unknown'
     except sr.RequestError as e:
         print("Request Error!; {0}".format(e))
 
@@ -36,11 +35,8 @@ if __name__ == '__main__':
     while True:
         r = sr.Recognizer()
         with sr.Microphone() as source:
-            #speak("게임 시작")
             print("Say Something")
             speech = r.listen(source)
-
-        #sys.stdout = open('audio_output.txt', 'w') #-- 텍스트 저장시 사용
 
         try:
             audio = r.recognize_google(speech, language="ko-KR")

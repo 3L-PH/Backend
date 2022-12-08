@@ -3,21 +3,6 @@
 import requests, hgtk, random
 from . import voice
 
-#warning 제거
-
-# requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
-#
-#
-# # 이미 있는 단어 알기위해 단어목록 저장
-# history = []
-# playing = True
-# # 키 발급은 https://krdict.korean.go.kr/openApi/openApiInfo
-# apikey = '0DFD73DA7DC4702D93CE13903CE27DCC'
-#
-# # 좀 치사한 한방단어 방지 목록
-# blacklist = ['즘', '틱', '늄', '슘', '퓸', '늬', '뺌', '섯', '숍', '튼', '름', '늠', '쁨']
-
-
 # 지정한 두 개의 문자열 사이의 문자열을 리턴하는 함수
 # string list에서 단어, 품사와 같은 요소들을 추출할때 사용됩니다
 def midReturn(val, s, e):
@@ -82,26 +67,11 @@ def checkexists(query, apikey, history):
         return ''
 
 
-print('''
-=============파이썬 끝말잇기===============
-사전 데이터 제공: 국립국어원 한국어기초사전
-- - - 게임 방법 - - -
-가장 처음 단어를 제시하면 끝말잇기가 시작됩니다
-'종료'를 입력하면 게임이 종료되며, '재시작'을 입력하여 게임을 다시 시작할 수 있습니다.
-- - - 게임 규칙 - - -
-1. 사전에 등재된 명사여야 합니다
-2. 적어도 단어의 길이가 두 글자 이상이어야 합니다
-3. 이미 사용한 단어를 다시 사용할 수 없습니다
-4. 두음법칙 적용 가능합니다 (ex. 리->니)
-==========================================
-''')
-
-
-def game_play(dir):
+def game_play(st, dir):
     requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
 
     # 이미 있는 단어 알기위해 단어목록 저장
-    history = []
+    history = [st]
     playing = True
     # 키 발급은 https://krdict.korean.go.kr/openApi/openApiInfo
     apikey = '0DFD73DA7DC4702D93CE13903CE27DCC'
@@ -109,13 +79,17 @@ def game_play(dir):
     # 좀 치사한 한방단어 방지 목록
     blacklist = ['즘', '틱', '늄', '슘', '퓸', '늬', '뺌', '섯', '숍', '튼', '름', '늠', '쁨']
     answord = ''
-    sword = ''
+    sword = st[-1]
 
     while (playing):
         wordOK = False
 
         while (not wordOK):
             query = voice.recognition()
+            
+            if query == 'unknown':
+                continue
+
             wordOK = True
 
             if query == '종료':
@@ -128,10 +102,10 @@ def game_play(dir):
                 wordOK = False
 
             else:
-                print(query)
                 if query == '':
                     wordOK = False
 
+                    # 음성 인식된 것이 없을 때, 어떻게 할 지 생각해보자
                     if len(history) == 0:
                         voice.speak('음성을 입력하세요',dir)
                     else:
@@ -149,19 +123,18 @@ def game_play(dir):
                         elif (sdis[0] == 'ㄹ' or sdis[0] == 'ㄴ') and qdis[0] == 'ㅇ' and qdis[1] in (
                         'ㅣ', 'ㅑ', 'ㅕ', 'ㅛ', 'ㅠ', 'ㅒ', 'ㅖ'):
                             print('두음법칙 적용됨')
-                        else: # 수정 **********************
-                            wordOK = False
-                            playing = False
-                            # print('컴퓨터의 승리!')
-                            voice.speak('컴퓨터의 승리!', dir)
-                            print(sword + '(으)로 시작하는 단어여야 합니다.')
-                            return
+                        else: # 끝말 안 이어지고 두음법칙 적용도 안되면 그냥 틀림
+                            # wordOK = False
+                            # playing = False
+                            # voice.speak('컴퓨터의 승리!', dir)
+                            # print(sword + '(으)로 시작하는 단어여야 합니다.')
+                            return 'win_com'
 
                     if len(query) == 1:
                         wordOK = False
                         voice.speak('두 글자 이상의 단어를 말해주세요', dir)
 
-                    if query in history:
+                    if query in history: # 이미 말한 단어인 경우
                         return 'win_com'
 
                     if query[len(query) - 1] in blacklist:
@@ -173,9 +146,6 @@ def game_play(dir):
                         if ans == '':
                             print('유효한 단어가 아닙니다')
                             return 'win_com'
-                        else:
-                            print('(' + midReturn(ans, '<definition>', '</definition>') + ')\n')
-
         history.append(query)
 
         if playing:
@@ -188,7 +158,7 @@ def game_play(dir):
                 sdis = hgtk.letter.decompose(start)
                 if sdis[0] == 'ㄹ':
                     newq = hgtk.letter.compose('ㄴ', sdis[1], sdis[2])
-                    print(start, '->', newq)
+                    # print(start, '->', newq)
                     start = newq
                     ans = findword(newq + '*', apikey, history, blacklist)
 
@@ -197,16 +167,16 @@ def game_play(dir):
                 sdis = hgtk.letter.decompose(start)
                 if sdis[0] == 'ㄴ' and sdis[1] in ('ㅣ', 'ㅑ', 'ㅕ', 'ㅛ', 'ㅠ', 'ㅒ', 'ㅖ'):
                     newq = hgtk.letter.compose('ㅇ', sdis[1], sdis[2])
-                    print(start, '->', newq)
+                    # print(start, '->', newq)
                     ans = findword(newq + '*', apikey, history, blacklist)
 
             if ans == '':
                 return 'win_user'
             else:
                 answord = midReturn(ans, '<word>', '</word>')  # 단어 불러오기
-                ansdef = midReturn(ans, '<definition>', '</definition>')  # 품사 불러오기
+                # ansdef = midReturn(ans, '<definition>', '</definition>')  # 품사 불러오기
                 history.append(answord)
 
-                print(query, '>', answord, '\n(' + ansdef + ')\n')
+                # print(query, '>', answord, '\n(' + ansdef + ')\n')
                 voice.speak(answord, dir)
                 sword = answord[len(answord) - 1]

@@ -1,41 +1,28 @@
 from django.shortcuts import render
-from .AI import vision
-import os
-# Create your views here.
-
-#from rest_framework import generics
-from rest_framework.decorators import permission_classes, api_view
-from rest_framework.permissions import AllowAny
-from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_201_CREATED, HTTP_200_OK
-from django.views.decorators.csrf import csrf_exempt
-
-from rest_framework.decorators import parser_classes
-from django.http import JsonResponse
-
-from django.shortcuts import render
-from .AI import vision
-# Create your views here.
-
-#from rest_framework import generics
-from rest_framework.decorators import permission_classes, api_view
-from rest_framework.permissions import AllowAny
-from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_201_CREATED, HTTP_200_OK
-from django.views.decorators.csrf import csrf_exempt
-
-from rest_framework.decorators import parser_classes
-from django.http import JsonResponse
-
+# from .AI import vision
+from .AI_new_v3 import vision
 import os, random
-from .voice import speak, recognition
-from . import last_word
+# Create your views here.
 
-start_word = ['현대', '강아지', '달팽이']
+#from rest_framework import generics
+from rest_framework.decorators import permission_classes, api_view
+from rest_framework.permissions import AllowAny
+from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_200_OK
+from django.http import JsonResponse
+
+from .voice import speak
+from . import last_word
+import numpy as np
+
+start_word = ["허승회", "야스오", "보라돌이"]
 
 def game_start():
     dir = os.getcwd() + "/mp3/"
-    os.mkdir(dir)
+    # os.mkdir(dir)
 
-    speak('끝말잇기 시작합니다', dir)    
+    #start_word = np.load('word.npy')
+
+    speak('끝말잇기 시작합니다', dir)
     start = start_word[random.randrange(0, len(start_word))]
     speak(start, dir)
 
@@ -59,17 +46,16 @@ def sleep_check(request):
     if request.method == 'POST':
         try:
             img = request.data["img"]
-            INIT_FLAG = request.data["INIT_FLAG"]
-            close_first = request.data["close_first"]
-            closed_flag = request.data["closed_flag"]
-            game_flag = request.data["game_flag"]
+            INIT_FLAG = int(request.data["INIT_FLAG"])
         except:
             message = {"message" : "Not Enough data", "State" : "fail"}
             return JsonResponse(message, status = HTTP_400_BAD_REQUEST)
-        result = vision(img, INIT_FLAG, close_first, closed_flag, game_flag)
+        result = vision(img, INIT_FLAG)
+        
         print(result)
         if result[-1] == 1:
-            message = {"data":"game start", "status":"success"}
+            result[-1] = 0
+            message = {"data" : result, "status":"success"}
                 # 여기서 게임 시작
             game_start()
         else:
